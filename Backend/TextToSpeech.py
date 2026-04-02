@@ -83,7 +83,7 @@ def TextToSpeech(Text, func=lambda r=None: True):
     ]
     
     if len(Data) > 4 and len(Text) >= 25000:
-            TTS(" ".join(Text.split(".")[0:2]) + ".", random.choice(responses), func)
+            TTS(" ".join(Text.split(".")[0:2]) + ". " + random.choice(responses), func)
 
     else:
         TTS(Text, func)

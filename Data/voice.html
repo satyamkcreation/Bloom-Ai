@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Voice Recognition</title>
+    <style>
+        body { font-family: Arial; background: #1a1a2e; color: white; padding: 20px; }
+        #start, #end { padding: 10px 20px; margin: 5px; font-size: 16px; cursor: pointer; }
+        #start { background: #00D4FF; border: none; border-radius: 5px; }
+        #end { background: #ff4444; border: none; border-radius: 5px; }
+        #output { margin-top: 20px; padding: 10px; font-size: 18px; min-height: 30px; }
+        .status { color: #00D4FF; font-size: 14px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h2>Voice Recognition</h2>
+    <button id="start" onclick="startRecognition()">Start Listening</button>
+    <button id="end" onclick="stopRecognition()">Stop</button>
+    <p id="output"></p>
+    <p class="status" id="status">Click Start to begin listening...</p>
+    
+    <script>
+        const output = document.getElementById('output');
+        const status = document.getElementById('status');
+        let recognition;
+        let finalTranscript = '';
+        
+        function startRecognition() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                status.textContent = 'Speech recognition not supported in this browser.';
+                return;
+            }
+            
+            recognition = new webkitSpeechRecognition() || new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.maxAlternatives = 1;
+            
+            recognition.onstart = function() {
+                status.textContent = 'Listening... Speak now!';
+            };
+            
+            recognition.onresult = function(event) {
+                let interimTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript + ' ';
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+                output.textContent = finalTranscript + interimTranscript;
+            };
+            
+            recognition.onerror = function(event) {
+                status.textContent = 'Error: ' + event.error;
+            };
+            
+            recognition.onend = function() {
+                if (finalTranscript) {
+                    status.textContent = 'Done! Got: ' + finalTranscript;
+                } else {
+                    status.textContent = 'No speech detected. Click Start to try again.';
+                }
+            };
+            
+            recognition.start();
+        }
+        
+        function stopRecognition() {
+            if (recognition) {
+                recognition.stop();
+            }
+        }
+    </script>
+</body>
+</html>

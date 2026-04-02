@@ -8,11 +8,16 @@ import webbrowser  # Import webbrowser for opening URLs.
 import subprocess  # Import subprocess for interacting with the system.
 import requests  # Import requests for making HTTP requests.
 import asyncio  # Import asyncio for asynchronous programming.
+import platform  # Import platform for OS detection.
 import os  # Import os for operating system functionalities.
+
+# Detect OS
+CURRENT_OS = platform.system()  # "Windows", "Darwin", "Linux"
 
 # Load environment variables from the .env file
 env_vars = dotenv_values(".env")
 GroqAPIKey = env_vars.get("GroqAPIKey")  # Retrieve the Groq API key
+Username = env_vars.get("Username", "User")  # Load Username from .env
 
 # Define CSS classes for parsing specific elements in HTML content
 classes = [
@@ -22,8 +27,8 @@ classes = [
     "sXLaOe", "LwkfKe", "VQF4g", "qviWpe", "kno-rdesc", "SPZz6b"
 ]
 
-# Define a user-agent for making web requests (updated for macOS)
-useragent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/1'
+# Define a user-agent for making web requests
+useragent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 
 # Initialize the Groq client with the API key
 client = Groq(api_key=GroqAPIKey)
@@ -36,7 +41,7 @@ professional_responses = [
 
 # List to store chatbot messages
 messages = []
-SystemChatBot = [{"role": "system", "content": f"Hello, I am {os.environ['Username']}, You're a content writer. You have to write content like letter,codes,applications,essays,notes,songs,poems etc "}]
+SystemChatBot = [{"role": "system", "content": f"Hello, I am {Username}, You're a content writer. You have to write content like letter,codes,applications,essays,notes,songs,poems etc "}]
 
 
 def GoogleSearch(Topic):
@@ -44,16 +49,26 @@ def GoogleSearch(Topic):
     return True  # Indicate success
 
 
-
 # Function to generate content using AI and save it to a file.
 def Content(Topic):
-    # Nested function to open a file in TextEdit (macOS equivalent of Notepad).
-    def OpenTextEdit(File):
-        subprocess.run(["open", "-a", "TextEdit", File])  # Open the file in TextEdit.
+    # Nested function to open a file in the appropriate text editor (cross-platform).
+    def OpenTextEditor(File):
+        if CURRENT_OS == "Windows":
+            subprocess.Popen(["notepad.exe", File])
+        elif CURRENT_OS == "Darwin":
+            subprocess.run(["open", "-a", "TextEdit", File])
+        else:  # Linux
+            # Try common text editors
+            for editor in ["xdg-open", "gedit", "nano", "vi"]:
+                try:
+                    subprocess.Popen([editor, File])
+                    return
+                except FileNotFoundError:
+                    continue
 
     # Nested function to generate content using the AI chatbot
     def ContentWriterAI(prompt):
-        messages.append({"role": "user", "content": f"{prompt}"})  # Add the user's prompt to messages
+        messages.append({"role": "user", "content": f"{prompt}"})
         completion = client.chat.completions.create(
             model="mixtral-8x7b-32768",
             messages=SystemChatBot + messages,
@@ -74,9 +89,10 @@ def Content(Topic):
     Topic = Topic.replace("content ", "")
     ContentByAI = ContentWriterAI(Topic)
     os.makedirs("Data", exist_ok=True)  # Ensure the "Data" directory exists
-    with open(f"Data/{Topic.lower().replace(' ', '')}.txt", "w", encoding="utf-8") as file:
+    filepath = f"Data/{Topic.lower().replace(' ', '')}.txt"
+    with open(filepath, "w", encoding="utf-8") as file:
         file.write(ContentByAI)
-    OpenTextEdit(f"Data/{Topic.lower().replace(' ', '')}.txt")
+    OpenTextEditor(filepath)
     return True
 
  
@@ -93,10 +109,80 @@ def PlayYouTube(query):
     return True  # Indicate success
 
 
-# Function to open an application.
+# Function to open an application (cross-platform).
 def OpenApp(app):
     try:
-        subprocess.run(["open", "-a", app])  # Open the application using macOS's `open` command
+        app_lower = app.lower().strip()
+
+        # Check if it's a known website
+        websites = {
+            "facebook": "https://www.facebook.com",
+            "instagram": "https://www.instagram.com",
+            "twitter": "https://www.twitter.com",
+            "youtube": "https://www.youtube.com",
+            "github": "https://www.github.com",
+            "google": "https://www.google.com",
+            "gmail": "https://mail.google.com",
+            "linkedin": "https://www.linkedin.com",
+            "reddit": "https://www.reddit.com",
+            "whatsapp web": "https://web.whatsapp.com",
+            "netflix": "https://www.netflix.com",
+            "amazon": "https://www.amazon.com",
+            "chatgpt": "https://chat.openai.com",
+        }
+
+        if app_lower in websites:
+            webbrowser.open(websites[app_lower])
+            return True
+
+        if CURRENT_OS == "Windows":
+            # Common Windows app name -> executable mapping
+            win_apps = {
+                "notepad": "notepad.exe",
+                "calculator": "calc.exe",
+                "calc": "calc.exe",
+                "paint": "mspaint.exe",
+                "cmd": "cmd.exe",
+                "terminal": "wt.exe",
+                "powershell": "powershell.exe",
+                "explorer": "explorer.exe",
+                "file explorer": "explorer.exe",
+                "chrome": "chrome.exe",
+                "google chrome": "chrome.exe",
+                "firefox": "firefox.exe",
+                "edge": "msedge.exe",
+                "brave": "brave.exe",
+                "vscode": "code.exe",
+                "vs code": "code.exe",
+                "word": "winword.exe",
+                "excel": "excel.exe",
+                "powerpoint": "powerpnt.exe",
+                "outlook": "outlook.exe",
+                "discord": "discord.exe",
+                "spotify": "spotify.exe",
+                "telegram": "telegram.exe",
+                "vlc": "vlc.exe",
+                "settings": "ms-settings:",
+            }
+
+            if app_lower in win_apps:
+                executable = win_apps[app_lower]
+                if executable.startswith("ms-"):
+                    os.startfile(executable)
+                else:
+                    subprocess.Popen(executable, shell=True)
+            else:
+                try:
+                    os.startfile(app)
+                except OSError:
+                    subprocess.Popen(f'start "" "{app}"', shell=True)
+
+        elif CURRENT_OS == "Darwin":
+            subprocess.run(["open", "-a", app])
+
+        else:  # Linux
+            subprocess.Popen([app_lower], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
         return True
     except Exception as e:
         print(f"Error opening app: {e}")
@@ -122,43 +208,107 @@ def search_google(query):
         print("Error: Unable to fetch search results.")
         return None
 
-# Function to close an application.
+# Function to close an application (cross-platform).
 def CloseApp(app):
     try:
-        subprocess.run(["pkill", app])  # Close the application using `pkill`
+        app_lower = app.lower().strip()
+        if CURRENT_OS == "Windows":
+            # Windows process name mapping
+            win_processes = {
+                "notepad": "notepad",
+                "calculator": "Calculator",
+                "calc": "Calculator",
+                "paint": "mspaint",
+                "chrome": "chrome",
+                "google chrome": "chrome",
+                "firefox": "firefox",
+                "edge": "msedge",
+                "brave": "brave",
+                "vscode": "Code",
+                "vs code": "Code",
+                "word": "WINWORD",
+                "excel": "EXCEL",
+                "discord": "Discord",
+                "spotify": "Spotify",
+                "telegram": "Telegram",
+                "vlc": "vlc",
+            }
+            process_name = win_processes.get(app_lower, app_lower)
+            result = subprocess.run(
+                f'taskkill /F /IM "{process_name}.exe"',
+                shell=True, capture_output=True, text=True
+            )
+            if result.returncode != 0:
+                # Try with original name
+                subprocess.run(
+                    f'taskkill /F /IM "{app}.exe"',
+                    shell=True, capture_output=True, text=True
+                )
+        elif CURRENT_OS == "Darwin":
+            subprocess.run(["pkill", "-f", app], capture_output=True)
+        else:  # Linux
+            subprocess.run(["pkill", "-f", app_lower], capture_output=True)
         return True
     except Exception as e:
         print(f"Error closing app: {e}")
         return False
 
 
-CloseApp("TextEdit")
-
-
-# Function to control system volume.
+# Function to control system volume (cross-platform).
 def System(command):
-    # Nested function to mute the system volume
+    command_lower = command.lower().strip()
+
     def mute():
-        subprocess.run(["osascript", "-e", "set Volume 0"])  # Mute volume using AppleScript
+        if CURRENT_OS == "Windows":
+            subprocess.run(
+                'powershell -Command "(New-Object -ComObject WScript.Shell).SendKeys([char]173)"',
+                shell=True, capture_output=True
+            )
+        elif CURRENT_OS == "Darwin":
+            subprocess.run(["osascript", "-e", "set Volume 0"])
+        else:
+            subprocess.run(["amixer", "set", "Master", "mute"], capture_output=True)
 
     def unmute():
-        subprocess.run(["osascript", "-e", "set Volume 5"])  # Unmute and set volume to 50%
+        if CURRENT_OS == "Windows":
+            subprocess.run(
+                'powershell -Command "(New-Object -ComObject WScript.Shell).SendKeys([char]173)"',
+                shell=True, capture_output=True
+            )
+        elif CURRENT_OS == "Darwin":
+            subprocess.run(["osascript", "-e", "set Volume 5"])
+        else:
+            subprocess.run(["amixer", "set", "Master", "unmute"], capture_output=True)
 
-    # Nested function to increase the system volume
     def volume_up():
-        subprocess.run(["osascript", "-e", "set Volume output volume (output volume of (get volume settings) + 10)"])
+        if CURRENT_OS == "Windows":
+            subprocess.run(
+                'powershell -Command "(New-Object -ComObject WScript.Shell).SendKeys([char]175)"',
+                shell=True, capture_output=True
+            )
+        elif CURRENT_OS == "Darwin":
+            subprocess.run(["osascript", "-e", "set Volume output volume (output volume of (get volume settings) + 10)"])
+        else:
+            subprocess.run(["amixer", "set", "Master", "10%+"], capture_output=True)
 
-    # Nested function to decrease the system volume
     def volume_down():
-        subprocess.run(["osascript", "-e", "set Volume output volume (output volume of (get volume settings) - 10)"])
+        if CURRENT_OS == "Windows":
+            subprocess.run(
+                'powershell -Command "(New-Object -ComObject WScript.Shell).SendKeys([char]174)"',
+                shell=True, capture_output=True
+            )
+        elif CURRENT_OS == "Darwin":
+            subprocess.run(["osascript", "-e", "set Volume output volume (output volume of (get volume settings) - 10)"])
+        else:
+            subprocess.run(["amixer", "set", "Master", "10%-"], capture_output=True)
 
-    if command == "mute":
+    if "mute" in command_lower and "unmute" not in command_lower:
         mute()
-    elif command == "unmute":
+    elif "unmute" in command_lower:
         unmute()
-    elif command == "volume up":
+    elif "volume up" in command_lower or "vol up" in command_lower:
         volume_up()
-    elif command == "volume down":
+    elif "volume down" in command_lower or "vol down" in command_lower:
         volume_down()
     else:
         return True

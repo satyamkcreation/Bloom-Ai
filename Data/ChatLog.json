@@ -1,0 +1,22 @@
+[
+    {
+        "role": "assistant",
+        "content": "I understand you're asking about 'Kya haal.'. Try asking me to 'open an app', 'search the web', 'create a file', or 'play music'. For more complex questions, please check your internet connection."
+    },
+    {
+        "role": "user",
+        "content": "open chrome and search youtube and play any bhojpuri song"
+    },
+    {
+        "role": "user",
+        "content": "open whatsapp"
+    },
+    {
+        "role": "user",
+        "content": "open gmail"
+    },
+    {
+        "role": "user",
+        "content": "open gmail and type leave mail to this \"rk5050989@gmail.com\" and send"
+    }
+]
