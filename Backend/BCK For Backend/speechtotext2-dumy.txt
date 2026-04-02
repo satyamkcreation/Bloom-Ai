@@ -1,0 +1,23 @@
+Traceback (most recent call last):
+  File "/Users/rahulkumar/Desktop/Bloom AI/Backend/SpeechToText.py", line 74, in <module>
+    driver = webdriver.Chrome(ChromeDriverManager().install())
+  File "/Users/rahulkumar/Desktop/Bloom AI/venv/lib/python3.13/site-packages/selenium/webdriver/chrome/webdriver.py", line 45, in __init__
+    super().__init__(
+    ~~~~~~~~~~~~~~~~^
+        browser_name=DesiredCapabilities.CHROME["browserName"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        keep_alive=keep_alive,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/rahulkumar/Desktop/Bloom AI/venv/lib/python3.13/site-packages/selenium/webdriver/chromium/webdriver.py", line 50, in __init__
+    if finder.get_browser_path():
+       ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/rahulkumar/Desktop/Bloom AI/venv/lib/python3.13/site-packages/selenium/webdriver/common/driver_finder.py", line 47, in get_browser_path
+    return self._binary_paths()["browser_path"]
+           ~~~~~~~~~~~~~~~~~~^^
+  File "/Users/rahulkumar/Desktop/Bloom AI/venv/lib/python3.13/site-packages/selenium/webdriver/common/driver_finder.py", line 56, in _binary_paths
+    browser = self._options.capabilities["browserName"]
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'capabilities'
