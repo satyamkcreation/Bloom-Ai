@@ -242,15 +242,22 @@ def MainExecution(Query=None):
 import threading
 
 def monitoring_thread():
-    """Background thread to check for text input."""
+    """Background thread to check for text and voice input."""
     while True:
         try:
-            if GetMicrophoneStatus() == "False":
+            status = GetMicrophoneStatus()
+            if status == "False":
                 Query = handle_input()
                 if Query:
                     SetMicrophoneStatus("True")
                     MainExecution(Query)
                     SetMicrophoneStatus("False")
+            elif status == "True":
+                # Voice recognition requested from GUI
+                Query = SpeechRecognition()
+                if Query and len(Query.strip()) > 1:
+                    MainExecution(Query)
+                SetMicrophoneStatus("False")
         except Exception as e:
             print(f"Monitor error: {e}")
         sleep(0.5)

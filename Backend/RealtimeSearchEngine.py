@@ -22,11 +22,16 @@ System = f"""Hello, I am {Username}, You are a very accurate and advanced AI cha
 
 # Load chat log from file or create a new one if it doesn't exist
 try:
+    import json
     with open(r"Data/ChatLog.json", "r") as f:
-        messages = load(f)
+        messages = json.load(f)
 except:
-    with open(r"Data/ChatLog.json", "w") as f:
-        dump([], f)
+    try:
+        import json
+        with open(r"Data/ChatLog.json", "w") as f:
+            json.dump([], f)
+    except:
+        pass
 
 # Function to perform Google search and format the results
 def GoogleSearch(query):
@@ -77,8 +82,12 @@ def RealtimeSearchEngine(prompt):
     global SystemChatBot, messages
 
     # Load chat log from file
-    with open(r"Data/ChatLog.json", "r") as f:
-        messages = load(f)
+    try:
+        import json
+        with open(r"Data/ChatLog.json", "r") as f:
+            messages = json.load(f)
+    except:
+        messages = []
 
     # Append user prompt to messages
     messages.append({"role": "user", "content": f"{prompt}"})
@@ -116,8 +125,12 @@ def RealtimeSearchEngine(prompt):
         messages.append({"role": "assistant", "content": Answer})
 
         # Save updated chat log to file
-        with open(r"Data/ChatLog.json", "w") as f:
-            dump(messages, f, indent=4)
+        try:
+            import json
+            with open(r"Data/ChatLog.json", "w") as f:
+                json.dump(messages, f, indent=4)
+        except:
+            pass
 
         # Remove the last system message from SystemChatBot
         SystemChatBot.pop()

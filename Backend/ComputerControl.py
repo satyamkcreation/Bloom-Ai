@@ -13,7 +13,7 @@ import uuid
 import shutil
 import datetime
 import glob
-
+import re
 
 # ─────────────────────────────────────────────────────────────
 #  Utility: Detect OS once
@@ -592,119 +592,82 @@ system_control = SystemControl()
 def ExecuteComputerCommand(command_text: str) -> str:
     """
     Parse and execute a computer control command from natural language.
-    Returns a human-readable result string.
+    Supports multi-step commands (separated by 'and', 'then', etc.)
+    Returns a human-readable summary of all actions performed.
     """
-    cmd_lower = command_text.lower().strip()
+    import re
+    # Split into multiple steps if present (avoiding splitting on 'and' inside content/quotes)
+    steps = re.split(r'\s+and\s+(?![^"]*"(?:[^"]*"[^"]*")*[^"]*$)', command_text, flags=re.IGNORECASE)
+    
+    refined_steps = []
+    for s in steps:
+        refined_steps.extend(re.split(r'\s+then\s+|;\s*', s, flags=re.IGNORECASE))
+    
+    overall_results = []
+    
+    for step in refined_steps:
+        step = step.strip()
+        if not step:
+            continue
+            
+        cmd_lower = step.lower()
+        result_msg = ""
+        
+        # ── File/Folder creation ──
+        if any(kw in cmd_lower for kw in ["create folder", "make folder", "new folder", "directory"]):
+            # Extract name
+            name_match = re.search(r"(?:folder|directory|project)\s+(?:named|called|with\s+name|name)?\s*[\"']?([^\s\"']+)[\"']?", cmd_lower)
+            folder_name = name_match.group(1) if name_match else step.split()[-1].strip().strip('"').strip("'")
+            
+            res = file_manager.create_folder(folder_name)
+            result_msg = res["message"]
 
-    # ── File/Folder creation ──
-    if "create folder" in cmd_lower or "make folder" in cmd_lower or "create directory" in cmd_lower:
-        # Extract folder name/path
-        for prefix in ["create folder ", "make folder ", "create directory ", "create a folder ", "make a folder "]:
-            if cmd_lower.startswith(prefix):
-                path = command_text[len(prefix):].strip().strip('"').strip("'")
-                result = file_manager.create_folder(path)
-                return result["message"]
-        # Fallback: use everything after the keyword
-        parts = cmd_lower.split("folder")
-        if len(parts) > 1:
-            path = parts[-1].strip().strip('"').strip("'")
-            if path:
-                result = file_manager.create_folder(path)
-                return result["message"]
+        elif any(kw in cmd_lower for kw in ["create file", "make file", "new file", "write to file"]):
+            # Extract content if present
+            content = ""
+            file_part = step
+            if " with content " in cmd_lower:
+                parts = re.split(r"\s+with\s+content\s+", step, maxsplit=1, flags=re.IGNORECASE)
+                file_part = parts[0]
+                content = parts[1].strip()
+            elif " containing " in cmd_lower:
+                parts = re.split(r"\s+containing\s+", step, maxsplit=1, flags=re.IGNORECASE)
+                file_part = parts[0]
+                content = parts[1].strip()
+            
+            # Extract file name
+            name_match = re.search(r"(?:file|document)\s+(?:named|called|with\s+name|name)?\s*[\"']?([^\s\"'<>|]+)[\"']?", file_part.lower())
+            file_name = name_match.group(1) if name_match else file_part.split()[-1].strip().strip('"').strip("'")
+            
+            res = file_manager.create_file(file_name, content)
+            result_msg = res["message"]
 
-    if "create file" in cmd_lower or "make file" in cmd_lower:
-        for prefix in ["create file ", "make file ", "create a file ", "make a file "]:
-            if cmd_lower.startswith(prefix):
-                rest = command_text[len(prefix):].strip().strip('"').strip("'")
-                # Check if there's content specified
-                if " content " in rest:
-                    parts = rest.split(" content ", 1)
-                    path = parts[0].strip()
-                    content = parts[1].strip()
-                else:
-                    path = rest
-                    content = ""
-                result = file_manager.create_file(path, content)
-                return result["message"]
+        elif any(kw in cmd_lower for kw in ["launch", "open", "start"]):
+            app_name = re.sub(r'^(launch|open|start)\s+(the\s+)?(app\s+)?', '', step, flags=re.IGNORECASE).strip().strip('"').strip("'")
+            res = app_controller.open_app(app_name)
+            result_msg = res["message"]
 
-    if "delete file" in cmd_lower or "remove file" in cmd_lower:
-        for prefix in ["delete file ", "remove file ", "delete the file ", "remove the file "]:
-            if cmd_lower.startswith(prefix):
-                path = command_text[len(prefix):].strip().strip('"').strip("'")
-                result = file_manager.delete_file(path)
-                return result["message"]
+        elif any(kw in cmd_lower for kw in ["delete", "remove"]):
+            target = step.split()[-1]
+            if "folder" in cmd_lower or "directory" in cmd_lower:
+                res = file_manager.delete_folder(target)
+            else:
+                res = file_manager.delete_file(target)
+            result_msg = res["message"]
 
-    if "delete folder" in cmd_lower or "remove folder" in cmd_lower:
-        for prefix in ["delete folder ", "remove folder ", "delete the folder ", "remove the folder "]:
-            if cmd_lower.startswith(prefix):
-                path = command_text[len(prefix):].strip().strip('"').strip("'")
-                result = file_manager.delete_folder(path)
-                return result["message"]
+        elif any(kw in cmd_lower for kw in ["run ", "execute ", "terminal "]):
+            actual_cmd = re.sub(r'^(run|execute|terminal)\s+', '', step, flags=re.IGNORECASE).strip()
+            res = executor.execute(actual_cmd)
+            result_msg = res["output"] or res["error"] or "Command finished."
 
-    if "move file" in cmd_lower or "move folder" in cmd_lower:
-        # Format: "move file X to Y"
-        if " to " in cmd_lower:
-            parts = command_text.split(" to ", 1)
-            src_part = parts[0]
-            for prefix in ["move file ", "move folder ", "move "]:
-                if src_part.lower().startswith(prefix):
-                    src_part = src_part[len(prefix):]
-            src = src_part.strip().strip('"').strip("'")
-            dst = parts[1].strip().strip('"').strip("'")
-            result = file_manager.move(src, dst)
-            return result["message"]
+        else:
+            # Fallback
+            res = executor.execute(step)
+            result_msg = res["output"] or res["error"] or f"Executed: {step}"
 
-    if "read file" in cmd_lower or "show file" in cmd_lower or "open file" in cmd_lower:
-        for prefix in ["read file ", "show file ", "open file ", "read the file ", "show the file "]:
-            if cmd_lower.startswith(prefix):
-                path = command_text[len(prefix):].strip().strip('"').strip("'")
-                result = file_manager.read_file(path)
-                if result["success"]:
-                    return f"Contents of {path}:\n{result['content']}"
-                return result.get("message", "Failed to read file")
+        overall_results.append(f"- {result_msg}")
 
-    if "write to file" in cmd_lower or "write file" in cmd_lower:
-        # Format: "write to file X content Y" or "write 'content' to file X"
-        if " content " in command_text:
-            parts = command_text.split(" content ", 1)
-            for prefix in ["write to file ", "write file "]:
-                if parts[0].lower().startswith(prefix):
-                    parts[0] = parts[0][len(prefix):]
-            path = parts[0].strip().strip('"').strip("'")
-            content = parts[1].strip()
-            result = file_manager.write_file(path, content)
-            return result["message"]
-
-    if "list files" in cmd_lower or "list directory" in cmd_lower or "list folder" in cmd_lower:
-        for prefix in ["list files in ", "list directory ", "list folder ", "list files "]:
-            if cmd_lower.startswith(prefix):
-                path = command_text[len(prefix):].strip().strip('"').strip("'")
-                result = file_manager.list_directory(path)
-                if result["success"]:
-                    items_str = "\n".join(
-                        f"  {'[DIR]' if i['is_dir'] else '[FILE]'} {i['name']}"
-                        for i in result["items"]
-                    )
-                    return f"Contents of {path}:\n{items_str}"
-                return result.get("message", "Failed to list directory")
-
-    # ── Run terminal command (fallback) ──
-    if cmd_lower.startswith("run ") or cmd_lower.startswith("execute ") or cmd_lower.startswith("terminal "):
-        for prefix in ["run ", "execute ", "terminal "]:
-            if cmd_lower.startswith(prefix):
-                actual_cmd = command_text[len(prefix):].strip()
-                result = executor.execute(actual_cmd)
-                if result["success"]:
-                    return f"Command executed successfully.\nOutput: {result['output']}" if result['output'] else "Command executed successfully."
-                else:
-                    return f"Command failed.\nError: {result['error']}"
-
-    # ── If nothing matched, try running it as a raw command ──
-    result = executor.execute(command_text)
-    if result["success"]:
-        return f"Executed: {command_text}\nOutput: {result['output']}" if result['output'] else f"Executed: {command_text}"
-    else:
-        return f"Failed to execute: {command_text}\nError: {result['error']}"
+    return "\n".join(overall_results)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -712,12 +675,9 @@ def ExecuteComputerCommand(command_text: str) -> str:
 # ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     print(f"Computer Control Module — Running on {CURRENT_OS}")
-    print(f"Logs → {_logger.log_dir}")
-    print("Type commands (e.g., 'create folder Desktop/test_project', 'run echo hello', 'open notepad')")
-    print("Type 'exit' to quit.\n")
     while True:
-        cmd = input(">>> ").strip()
-        if cmd.lower() in ("exit", "quit", "bye"):
-            break
-        print(ExecuteComputerCommand(cmd))
-        print()
+        try:
+            cmd = input(">>> ").strip()
+            if cmd.lower() in ("exit", "quit", "bye"): break
+            print(ExecuteComputerCommand(cmd))
+        except KeyboardInterrupt: break

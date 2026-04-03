@@ -30,71 +30,61 @@ HtmlCode = '''<!DOCTYPE html>
         #start, #end { padding: 10px 20px; margin: 5px; font-size: 16px; cursor: pointer; }
         #start { background: #00D4FF; border: none; border-radius: 5px; }
         #end { background: #ff4444; border: none; border-radius: 5px; }
-        #output { margin-top: 20px; padding: 10px; font-size: 18px; min-height: 30px; }
+        #output { margin-top: 20px; padding: 10px; font-size: 18px; min-height: 30px; border: 1px solid #444; }
         .status { color: #00D4FF; font-size: 14px; margin-top: 10px; }
+        #error { color: #ff4444; font-size: 12px; margin-top: 5px; }
     </style>
 </head>
 <body>
     <h2>Voice Recognition</h2>
     <button id="start" onclick="startRecognition()">Start Listening</button>
     <button id="end" onclick="stopRecognition()">Stop</button>
-    <p id="output"></p>
-    <p class="status" id="status">Click Start to begin listening...</p>
+    <div id="output"></div>
+    <div class="status" id="status">Ready</div>
+    <div id="error"></div>
     
     <script>
         const output = document.getElementById('output');
         const status = document.getElementById('status');
+        const errorDiv = document.getElementById('error');
         let recognition;
-        let finalTranscript = '';
         
         function startRecognition() {
-            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                status.textContent = 'Speech recognition not supported in this browser.';
-                return;
-            }
-            
-            recognition = new webkitSpeechRecognition() || new SpeechRecognition();
-            recognition.lang = 'en-US';
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.maxAlternatives = 1;
-            
-            recognition.onstart = function() {
-                status.textContent = 'Listening... Speak now!';
-            };
-            
-            recognition.onresult = function(event) {
-                let interimTranscript = '';
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    const transcript = event.results[i][0].transcript;
-                    if (event.results[i].isFinal) {
-                        finalTranscript += transcript + ' ';
-                    } else {
-                        interimTranscript += transcript;
+            try {
+                if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                    status.textContent = 'Not supported';
+                    errorDiv.textContent = 'Speech recognition not supported in this browser.';
+                    return;
+                }
+                
+                recognition = new (window.webkitSpeechRecognition || window.SpeechRecognition)();
+                recognition.lang = 'en-US';
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                
+                recognition.onstart = () => { status.textContent = 'Listening'; errorDiv.textContent = ''; };
+                recognition.onerror = (event) => { 
+                    status.textContent = 'Error'; 
+                    errorDiv.textContent = 'Recognition error: ' + event.error;
+                };
+                recognition.onend = () => { status.textContent = 'Ended'; };
+                
+                recognition.onresult = (event) => {
+                    let combined = '';
+                    for (let i = 0; i < event.results.length; i++) {
+                        combined += event.results[i][0].transcript;
                     }
-                }
-                output.textContent = finalTranscript + interimTranscript;
-            };
-            
-            recognition.onerror = function(event) {
-                status.textContent = 'Error: ' + event.error;
-            };
-            
-            recognition.onend = function() {
-                if (finalTranscript) {
-                    status.textContent = 'Done! Got: ' + finalTranscript;
-                } else {
-                    status.textContent = 'No speech detected. Click Start to try again.';
-                }
-            };
-            
-            recognition.start();
+                    output.textContent = combined;
+                };
+                
+                recognition.start();
+            } catch (e) {
+                errorDiv.textContent = 'JS Error: ' + e.message;
+            }
         }
         
         function stopRecognition() {
-            if (recognition) {
-                recognition.stop();
-            }
+            if (recognition) recognition.stop();
         }
     </script>
 </body>
@@ -191,48 +181,54 @@ def SpeechRecognition():
     """
     SetAssistantStatus("Starting voice recognition...")
     
-    # Try to use Chrome WebSpeech
     try:
         drv = get_driver()
         drv.get(link)
         
-        # Wait for page to load
         import time
-        time.sleep(1)
+        time.sleep(0.5) # Wait for load
         
-        # Click start button
         from selenium.webdriver.common.by import By
         drv.find_element(By.ID, "start").click()
         SetAssistantStatus("Listening...")
         
-        # Wait for speech input (up to 30 seconds)
-        timeout = 30
+        timeout = 20
         start_time = time.time()
         last_text = ""
+        last_change_time = time.time()
         
         while time.time() - start_time < timeout:
             try:
-                text = drv.find_element(By.ID, "output").text
-                if text and len(text.strip()) > 0:
+                # Check status and errors
+                cur_status = drv.find_element(By.ID, "status").text
+                if "Error" in cur_status:
+                    err_msg = drv.find_element(By.ID, "error").text
+                    print(f"Speech JS Error: {err_msg}")
+                    break
+                    
+                text = drv.find_element(By.ID, "output").text.strip()
+                
+                if text != last_text:
                     last_text = text
-                    # If we have final speech (wait a bit to confirm)
-                    if time.time() - start_time > 3 and text == last_text:
-                        drv.find_element(By.ID, "end").click()
-                        SetAssistantStatus("Processing...")
-                        return QueryModifier(text.strip())
-                time.sleep(0.5)
-            except:
-                time.sleep(0.5)
+                    last_change_time = time.time()
+                
+                # If we have text and user hasn't spoken for 2 seconds, consider it done
+                if last_text and (time.time() - last_change_time > 2.0):
+                    break
+                    
+                time.sleep(0.3)
+            except Exception as e:
+                time.sleep(0.3)
         
-        # Timeout - try to stop gracefully
+        # Stop 
         try:
             drv.find_element(By.ID, "end").click()
         except:
             pass
-        
+            
         if last_text:
             SetAssistantStatus("Processing...")
-            return QueryModifier(last_text.strip())
+            return QueryModifier(last_text)
         
         SetAssistantStatus("No speech detected")
         return ""

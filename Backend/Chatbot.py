@@ -167,7 +167,7 @@ def ChatBot(Query):
                 with open(r"Data/ChatLog.json", "r", encoding="utf-8") as f:
                     content = f.read().strip()
                     if content:
-                        messages = load(content)
+                        messages = json.loads(content)
             except:
                 messages = []
 
@@ -210,7 +210,7 @@ def ChatBot(Query):
             # Save the updated chat log to the JSON file
             try:
                 with open(r"Data/ChatLog.json", "w", encoding="utf-8") as f:
-                    dump(messages, f, indent=4)
+                    json.dump(messages, f, indent=4)
             except:
                 pass
 
@@ -227,7 +227,7 @@ def ChatBot(Query):
             # Try to reset the chat log before retrying
             try:
                 with open(r"Data/ChatLog.json", "w", encoding="utf-8") as f:
-                    dump([], f)
+                    json.dump([], f)
                 messages = []
             except:
                 pass

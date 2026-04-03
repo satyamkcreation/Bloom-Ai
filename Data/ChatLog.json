@@ -1,22 +1,110 @@
 [
     {
         "role": "assistant",
-        "content": "I understand you're asking about 'Kya haal.'. Try asking me to 'open an app', 'search the web', 'create a file', or 'play music'. For more complex questions, please check your internet connection."
+        "content": "To create a todo web on desktop, follow these steps: \n1. Open a text editor or an IDE like Visual Studio Code.\n2. Create a new HTML file named index.html.\n3. Add basic HTML structure, including doctype, html, head, and body tags.\n4. Create a div to hold the todo list and a form to add new tasks.\n5. Add JavaScript code to handle user input, add tasks to the list, and save data to local storage.\n6. Style the todo list using CSS.\nExample code:\n```\n<!-- index.html -->\n<!DOCTYPE html>\n<html>\n<head>\n  <title>Todo List</title>\n  <style>\n    /* add styles here */\n  </style>\n</head>\n<body>\n  <h1>Todo List</h1>\n  <ul id=\"todo-list\"></ul>\n  <form id=\"add-task\">\n    <input type=\"text\" id=\"task-input\" placeholder=\"Add new task\">\n    <button type=\"submit\">Add</button>\n  </form>\n  <script>\n    // get todo list and form elements\n    const todoList = document.getElementById('todo-list');\n    const addTaskForm = document.getElementById('add-task');\n    const taskInput = document.getElementById('task-input');\n    // add event listener to form submission\n    addTaskForm.addEventListener('submit', (e) => {\n      e.preventDefault();\n      const task = taskInput.value.trim();\n      if (task) {\n        // add task to list and save to local storage\n        const todoItems = JSON.parse(localStorage.getItem('todoItems')) || [];\n        todoItems.push(task);\n        localStorage.setItem('todoItems', JSON.stringify(todoItems));\n        todoList.innerHTML += `<li>${task}</li>`;\n        taskInput.value = '';\n      }\n    });\n    // load existing tasks from local storage\n    const storedTasks = JSON.parse(localStorage.getItem('todoItems'));\n    if (storedTasks) {\n      storedTasks.forEach((task) => {\n        todoList.innerHTML += `<li>${task}</li>`;\n      });\n    }\n  </script>\n</body>\n</html>\n```"
     },
     {
         "role": "user",
-        "content": "open chrome and search youtube and play any bhojpuri song"
+        "content": "create a folder with name \"to-do\" and inside that folder create a index.html file and write the to do website code and run it"
+    },
+    {
+        "role": "assistant",
+        "content": "Failed to execute: create a folder with name \"to-do\" and inside that folder create a index.html file and write the to do website code and run it\nError: 'create' is not recognized as an internal or external command,\noperable program or batch file."
     },
     {
         "role": "user",
-        "content": "open whatsapp"
+        "content": "play bhojpuri song of pawan singh"
     },
     {
         "role": "user",
-        "content": "open gmail"
+        "content": "play any song"
     },
     {
         "role": "user",
-        "content": "open gmail and type leave mail to this \"rk5050989@gmail.com\" and send"
+        "content": "create a to-do folder on desktop and create index.html file and write to-do website code inside it"
+    },
+    {
+        "role": "assistant",
+        "content": "- 'create' is not recognized as an internal or external command,\noperable program or batch file.\n- 'create' is not recognized as an internal or external command,\noperable program or batch file.\n- 'write' is not recognized as an internal or external command,\noperable program or batch file."
+    },
+    {
+        "role": "user",
+        "content": "create a to do website on desktop by creating a folder"
+    },
+    {
+        "role": "assistant",
+        "content": "- Folder created: C:\\Users\\satyam thakur\\Desktop\\to_do_website"
+    },
+    {
+        "role": "user",
+        "content": "create rk folder on desktop"
+    },
+    {
+        "role": "assistant",
+        "content": "- Folder created: C:\\Users\\satyam thakur\\Desktop\\rk"
+    },
+    {
+        "role": "user",
+        "content": "tell me the destination of folder name rk"
+    },
+    {
+        "role": "user",
+        "content": "Tell me the destination of folder name rk."
+    },
+    {
+        "role": "assistant",
+        "content": "C:\\Users\\satyam thakur\\Desktop\\rk"
+    },
+    {
+        "role": "assistant",
+        "content": "C:\\Users\\satyam thakur\\Desktop\\rk"
+    },
+    {
+        "role": "user",
+        "content": "not created"
+    },
+    {
+        "role": "user",
+        "content": "Not created."
+    },
+    {
+        "role": "assistant",
+        "content": "Folder 'rk' is not created on the desktop."
+    },
+    {
+        "role": "assistant",
+        "content": "Folder 'rk' is not created on the desktop."
+    },
+    {
+        "role": "user",
+        "content": "then where??"
+    },
+    {
+        "role": "user",
+        "content": "Then where?."
+    },
+    {
+        "role": "assistant",
+        "content": "The destination of the folder 'rk' is unknown as it has not been created."
+    },
+    {
+        "role": "assistant",
+        "content": "The destination of the folder 'rk' is unknown as it has not been created."
+    },
+    {
+        "role": "user",
+        "content": "so create it on desktop"
+    },
+    {
+        "role": "assistant",
+        "content": "- Folder created: C:\\Users\\satyam thakur\\Desktop"
+    },
+    {
+        "role": "user",
+        "content": "open vs code"
+    },
+    {
+        "role": "user",
+        "content": "open chrome and search about elon musk"
     }
 ]
